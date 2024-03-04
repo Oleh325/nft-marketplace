@@ -19,7 +19,7 @@ const REPORT_GAS = false
  */
 
 const config: HardhatUserConfig = {
-    solidity: "0.8.19",
+    solidity: "0.8.20",
     defaultNetwork: "hardhat",
     networks: {
         localhost: {
@@ -34,7 +34,7 @@ const config: HardhatUserConfig = {
     etherscan: {
         apiKey: {
             sepolia: ETHERSCAN_API_KEY,
-        }
+        },
     },
     gasReporter: {
         enabled: REPORT_GAS,
