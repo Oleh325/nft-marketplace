@@ -2,6 +2,7 @@
 pragma solidity ^0.8.7;
 
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 error NFTmarketplace__PriceMustBeAboveZero();
 error NFTmarketplace__NotApprovedForMarketplace();
@@ -10,7 +11,7 @@ error NFTmarketplace__ItemNotListed(address nftAddress, uint256 tokenId);
 error NFTmarketplace__NotOwner();
 error NFTmarketplace__PriceNotMet(address nftAddress, uint256 tokenId, uint256 price);
 
-contract NFTmarketplace is ERC721 {
+contract NFTmarketplace is ERC721, ReentrancyGuard {
     struct Listing {
         address seller;
         uint256 price;
@@ -31,6 +32,12 @@ contract NFTmarketplace is ERC721 {
         address indexed buyer,
         uint256 indexed tokenId,
         uint256 price
+    );
+
+    event ItemCancelled(
+        address indexed nftAddress,
+        address indexed seller,
+        uint256 indexed tokenId
     );
 
     modifier notListed(address nftAddress, uint256 tokenId) {
@@ -84,12 +91,12 @@ contract NFTmarketplace is ERC721 {
     }
 
     function buyItem(
-        address ntfAddress,
+        address nftAddress,
         uint256 tokenId
-    ) external payable isListed(nftAddress, tokenId) {
+    ) external payable nonReentrant isListed(nftAddress, tokenId) {
         Listing memory listedItem = s_listings[nftAddress][tokenId];
         if (msg.value < listedItem.price) {
-            revert NFTmarketplace__PriceNotMet(ntfAddress, tokenId, listedItem.price);
+            revert NFTmarketplace__PriceNotMet(nftAddress, tokenId, listedItem.price);
         }
         s_proceeds[listedItem.seller] += msg.value;
         delete (s_listings[nftAddress][tokenId]);
@@ -97,7 +104,10 @@ contract NFTmarketplace is ERC721 {
         emit ItemBought(nftAddress, msg.sender, tokenId, listedItem.price);
     }
 
-    function cancelItem() public {}
+    function cancelItem(address nftAddress, uint256 tokenId) external isOwner(nftAddress, tokenId, msg.sender) isListed(nftAddress, tokenId) {
+        delete (s_listings[nftAddress][tokenId]);
+        emit ItemCancelled(nftAddress, msg.sender, tokenId);
+    }
 
     function updateListing() public {}
 
